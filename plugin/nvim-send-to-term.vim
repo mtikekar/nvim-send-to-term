@@ -1,52 +1,69 @@
 function! s:SendHere()
     if exists("b:terminal_job_id")
-        let g:term_id = b:terminal_job_id
+        let g:send_term_id = b:terminal_job_id
     else
         echoerr "This buffer is not a terminal."
     endif
 endfunction
 
-function! s:GetCol(e)
-    return getpos(a:e)[2] - 1
+" bracketed paste
+let g:send_bp = ['', '']
+
+function! s:SendPasteOn()
+    let g:send_bp = ["\e[200~", "\e[201~", "\r"]
+endfunction
+
+function! s:SendPasteOff()
+    let g:send_bp = ['', '']
 endfunction
 
 function! s:SendToTerm(mode, ...)
-    if !exists("g:term_id")
+    if !exists("g:send_term_id")
         echoerr "Destination terminal not set. Do :SendHere in the desired terminal."
         return 0
-    end
+    endif
 
-    if a:0 > 0
+    if a:mode ==# 'direct'
         " explicit lines provided as function arguments
-        return jobsend(g:term_id, add(a:000, ''))
-    end
-
-    " mode tells how the operator s was used. e.g.
-    " viws  v
-    " Vjjs  V
-    " siw   char
-    " sG    line
-    " In first two cases, marks are < and >. In the last two, marks are [ ]
-    if a:mode ==# 'v' || a:mode ==# 'V'
-        let smark = "'<"
-        let emark = "'>"
+        let lines = copy(a:000)
     else
-        let smark = "'["
-        let emark = "']"
-    end
-    let lines = getline(smark, emark)
-    if a:mode ==# 'char' || a:mode ==# 'v'
-        " For char-based modes, truncate first and last lines
-        let lines[0] = lines[0][s:GetCol(smark):]
-        let lines[-1] = lines[-1][s:GetCol(emark)]
-    end
-    " echom a:mode . string(getpos(smark)) . string(getpos(emark))
-    return jobsend(g:term_id, add(lines, ''))
+        " mode tells how the operator s was used. e.g.
+        " viws  v     (char-wise visual)
+        " Vjjs  V     (line-vise visual)
+        " siw   char  (char-wise normal text-object)
+        " sG    line  (line-wise normal text-object)
+        " In first two cases, marks are < and >. In the last two, marks are [ ]
+        let marks = (a:mode ==? 'v')? ["'<", "'>"]: ["'[", "']"]
+        let lines = getline(marks[0], marks[1])
+        if a:mode ==# 'char' || a:mode ==# 'v'
+            " For char-based modes, truncate first and last lines
+            let [c0, c1] = map(copy(marks), "getpos(v:val)[2] - 1")
+            if len(lines) == 1
+                let lines[0] = lines[0][c0:c1]
+            else
+                let lines[0] = lines[0][c0:]
+                let lines[-1] = lines[-1][:c1]
+            endif
+        end
+        " echom string(marks)
+        " echom join([a:mode, getpos(marks[0]), getpos(marks[1]), lines])
+    endif
+    " echom string(lines)
+    let send_bp = (len(lines) > 1)? g:send_bp: ['', '']
+    let lines[0] = send_bp[0] . lines[0]
+    call jobsend(g:send_term_id, lines + send_bp[1:])
+    " If sending multiple lines, slow down a little to let some REPLs catch up
+    if v:count1 > 1
+        " echom v:count1
+        sleep 100m
+    endif
 endfunction
 
 command! SendHere :call <SID>SendHere()
+command! SendPasteOn :call <SID>SendPasteOn()
+command! SendPasteOff :call <SID>SendPasteOff()
 
-nmap <silent> ss :call <SID>SendToTerm('', getline('.'))<cr>
+nmap <silent> ss :call <SID>SendToTerm('direct', getline('.'))<cr>
 nmap <silent> S s$
 
 nmap <silent> s :set opfunc=<SID>SendToTerm<cr>g@
