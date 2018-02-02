@@ -14,7 +14,7 @@ built-in `y` or `d` operators.
 For multiline text, some REPLs (e.g. IPython) only receive the first line. For
 them, try `:SendHere ipy` in the terminal. You can add support for your own REPL's
 multiline quirks in your init.vim with:
-`let g:send_multiline = {'repl': ['begin-code', 'end-code', 'extra']}`
+`let g:send_multiline = {'repl': ['begin-code', 'end-code', 'newline-code']}`
 
 ## Provided commands, functions, operators
 

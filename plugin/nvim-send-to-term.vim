@@ -1,7 +1,7 @@
 if !exists("g:send_multiline")
     let g:send_multiline = {}
 endif
-let g:send_multiline.ipy = ["\e[200~", "\e[201~", ""]
+let g:send_multiline.ipy = ["\e[200~", "\e[201~\n\r", "\n"]
 
 function! s:SendHere(...)
     if !exists("b:terminal_job_id")
@@ -12,11 +12,11 @@ function! s:SendHere(...)
     let g:send_term_id = b:terminal_job_id
 
     if a:0 == 0
-        unlet! s:send_bp
+        let s:send_bp = ["", "\n", "\n"]
     elseif a:0 == 1 && has_key(g:send_multiline, a:1)
         let s:send_bp = g:send_multiline[a:1]
     else
-        echoerr "Unknown arguments: " . join(a:000)
+        echoerr "Unsupported terminal multiline arguments: " . join(a:000)
     endif
 endfunction
 
@@ -56,10 +56,12 @@ function! s:SendToTerm(mode, ...)
         " echom join([a:mode, getpos(marks[0]), getpos(marks[1]), lines])
     endif
     " echom string(lines)
-    let send_bp = (exists("s:send_bp") && len(lines) > 1)? s:send_bp: ['', '']
-    let lines[0] = send_bp[0] . lines[0]
-    let lines[-1] = lines[-1]
-    call jobsend(g:send_term_id, lines + send_bp[1:])
+    if len(lines) > 1
+        let line = s:send_bp[0] . join(lines, s:send_bp[2]) . s:send_bp[1]
+    else
+        let line = lines[0] . "\n"
+    endif
+    call jobsend(g:send_term_id, line)
     " If sending multiple lines over multiple commands, slow down a little to
     " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
