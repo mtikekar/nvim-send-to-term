@@ -2,9 +2,9 @@ if !exists('g:send_multiline')
     let g:send_multiline = {}
 endif
 let g:send_multiline.default = {'begin':'', 'end':"\n", 'newline':"\n"}
-let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\n\r", 'newline':"\n"}
+let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline':"\n"}
 " This works too:
-" let g:send_multiline.ipy = {'begin':'', 'end':"\n\r", 'newline':"\<c-q>\n"}
+" let g:send_multiline.ipy = {'begin':'', 'end':"\r\r\r", 'newline':"\<c-q>\n"}
 
 function! s:SendHere(...)
     if !exists('b:terminal_job_id')
