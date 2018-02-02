@@ -1,7 +1,7 @@
 # Neovim plugin to send text from a buffer to a terminal
 
-It is much simpler than other similar plugins like
-[neoterm](https://github.com/kassio/neoterm),
+This plugin aims to be simpler in design and easier to use than other similar
+plugins like [neoterm](https://github.com/kassio/neoterm),
 [vimcmdline](https://github.com/jalvesaq/vimcmdline),
 [vim-slime](https://github.com/jpalardy/vim-slime),
 [repl.nvim](https://gitlab.com/HiPhish/repl.nvim), etc. It does not care for
