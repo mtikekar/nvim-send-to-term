@@ -47,4 +47,3 @@ S
 1. Allow buffers/windows to have different target terminals.
 2. Add motions for IPython-style cell-blocks (e.g. send all code between two
    comments), function, indent-level, etc.
-3. Fix stuff in IPython: need for extra newlines, slowdown, etc.
