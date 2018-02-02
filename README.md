@@ -10,8 +10,19 @@ filetypes and REPLs. Instead, you go to an existing terminal and type
 text to the terminal. The behaviour of the `s` operator closely matches vim's
 built-in `y` or `d` operators.
 
-For multiline text, some REPLs only receive the first line. To fix this, try
-`:SendPasteOn` in any buffer.
+For multiline text, some REPLs (e.g. IPython) only receive the first line. For
+them, try `:SendHere bracketed` in the terminal.
+
+## Provided commands, functions, operators
+
+```vim
+:SendHere
+:SendHere bracketed
+[count]ss
+<visual selection>s
+s<motion>
+S
+```
 
 ## To do
 

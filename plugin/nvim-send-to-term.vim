@@ -1,18 +1,23 @@
-function! s:SendHere()
-    if exists("b:terminal_job_id")
-        let g:send_term_id = b:terminal_job_id
-    else
+function! s:SendHere(...)
+    if !exists("b:terminal_job_id")
         echoerr "This buffer is not a terminal."
+        return
+    end
+
+    let g:send_term_id = b:terminal_job_id
+
+    if a:0 == 0
+        unlet! g:send_bp
+    elseif a:0 == 1 && a:1 ==# "bracketed"
+        " bracketed paste
+        let g:send_bp = ["\e[200~", "\e[201~", ""]
+    else
+        echoerr "Unknown arguments: " . join(a:000)
     endif
 endfunction
 
-" bracketed paste
-function! s:SendPasteOn()
-    let g:send_bp = ["\e[200~", "\e[201~", ""]
-endfunction
-
-function! s:SendPasteOff()
-    unlet g:send_bp
+function! s:SendOpts(ArgLead, CmdLine, CursorPos)
+    return ["bracketed"]
 endfunction
 
 function! s:SendToTerm(mode, ...)
@@ -59,9 +64,7 @@ function! s:SendToTerm(mode, ...)
     endif
 endfunction
 
-command! SendHere :call <SID>SendHere()
-command! SendPasteOn :call <SID>SendPasteOn()
-command! SendPasteOff :call <SID>SendPasteOff()
+command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
 
 nmap <silent> ss :call <SID>SendToTerm('direct', getline('.'))<cr>
 nmap <silent> S s$
