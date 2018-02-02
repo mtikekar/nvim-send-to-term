@@ -14,7 +14,14 @@ built-in `y` or `d` operators.
 For multiline text, some REPLs (e.g. IPython) only receive the first line. For
 them, try `:SendHere ipy` in the terminal. You can add support for your own REPL's
 multiline quirks in your init.vim with:
-`let g:send_multiline = {'repl': ['begin-code', 'end-code', 'newline-code']}`
+
+```vim
+let g:send_multiline = {
+    'repl1': {'begin':..., 'end':..., 'newline':...},
+    'repl2': {'begin':..., 'end':..., 'newline':...},
+    ...
+}
+```
 
 ## Provided commands, functions, operators
 
@@ -34,4 +41,3 @@ S
 2. Add motions for IPython-style cell-blocks (e.g. send all code between two
    comments), function, indent-level, etc.
 3. Fix stuff in IPython: need for extra newlines, slowdown, etc.
-4. Cleaner multiline stuff

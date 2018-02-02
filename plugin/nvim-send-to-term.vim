@@ -1,23 +1,18 @@
-if !exists("g:send_multiline")
+if !exists('g:send_multiline')
     let g:send_multiline = {}
 endif
-let g:send_multiline.ipy = ["\e[200~", "\e[201~\n\r", "\n"]
+let g:send_multiline.default = {'begin':'', 'end':"\n", 'newline':"\n"}
+let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\n\r", 'newline':"\n"}
 
 function! s:SendHere(...)
-    if !exists("b:terminal_job_id")
-        echoerr "This buffer is not a terminal."
+    if !exists('b:terminal_job_id')
+        echoerr 'This buffer is not a terminal.'
         return
     end
 
-    let g:send_term_id = b:terminal_job_id
-
-    if a:0 == 0
-        let s:send_bp = ["", "\n", "\n"]
-    elseif a:0 == 1 && has_key(g:send_multiline, a:1)
-        let s:send_bp = g:send_multiline[a:1]
-    else
-        echoerr "Unsupported terminal multiline arguments: " . join(a:000)
-    endif
+    let term_type = get(a:000, 0, 'default')
+    let g:send_target = {'id': b:terminal_job_id}
+    call extend(g:send_target, g:send_multiline[term_type])
 endfunction
 
 function! s:SendOpts(ArgLead, CmdLine, CursorPos)
@@ -25,8 +20,8 @@ function! s:SendOpts(ArgLead, CmdLine, CursorPos)
 endfunction
 
 function! s:SendToTerm(mode, ...)
-    if !exists("g:send_term_id")
-        echoerr "Destination terminal not set. Do :SendHere in the desired terminal."
+    if !exists('g:send_target')
+        echoerr 'Target terminal not set. Do :SendHere in the desired terminal.'
         return 0
     endif
 
@@ -44,7 +39,7 @@ function! s:SendToTerm(mode, ...)
         let lines = getline(marks[0], marks[1])
         if a:mode ==# 'char' || a:mode ==# 'v'
             " For char-based modes, truncate first and last lines
-            let [c0, c1] = map(copy(marks), "getpos(v:val)[2] - 1")
+            let [c0, c1] = map(copy(marks), 'getpos(v:val)[2] - 1')
             if len(lines) == 1
                 let lines[0] = lines[0][c0:c1]
             else
@@ -56,12 +51,13 @@ function! s:SendToTerm(mode, ...)
         " echom join([a:mode, getpos(marks[0]), getpos(marks[1]), lines])
     endif
     " echom string(lines)
+    let term = g:send_target
     if len(lines) > 1
-        let line = s:send_bp[0] . join(lines, s:send_bp[2]) . s:send_bp[1]
+        let line = term.begin . join(lines, term.newline) . term.end
     else
         let line = lines[0] . "\n"
     endif
-    call jobsend(g:send_term_id, line)
+    call jobsend(term.id, line)
     " If sending multiple lines over multiple commands, slow down a little to
     " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
