@@ -7,14 +7,12 @@ function! s:SendHere()
 endfunction
 
 " bracketed paste
-let g:send_bp = ['', '']
-
 function! s:SendPasteOn()
-    let g:send_bp = ["\e[200~", "\e[201~", "\r"]
+    let g:send_bp = ["\e[200~", "\e[201~", ""]
 endfunction
 
 function! s:SendPasteOff()
-    let g:send_bp = ['', '']
+    unlet g:send_bp
 endfunction
 
 function! s:SendToTerm(mode, ...)
@@ -49,10 +47,12 @@ function! s:SendToTerm(mode, ...)
         " echom join([a:mode, getpos(marks[0]), getpos(marks[1]), lines])
     endif
     " echom string(lines)
-    let send_bp = (len(lines) > 1)? g:send_bp: ['', '']
+    let send_bp = (exists("g:send_bp") && len(lines) > 1)? g:send_bp: ['', '', '']
     let lines[0] = send_bp[0] . lines[0]
-    call jobsend(g:send_term_id, lines + send_bp[1:])
-    " If sending multiple lines, slow down a little to let some REPLs catch up
+    let lines[-1] = lines[-1] . send_bp[1]
+    call jobsend(g:send_term_id, lines + send_bp[2:])
+    " If sending multiple lines over multiple commands, slow down a little to
+    " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
         " echom v:count1
         sleep 100m
