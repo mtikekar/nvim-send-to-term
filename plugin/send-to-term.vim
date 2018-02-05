@@ -13,7 +13,7 @@ function! s:SendHere(...)
     end
 
     let term_type = get(a:000, 0, 'default')
-    let g:send_target = {'id': b:terminal_job_id}
+    let g:send_target = {'type': 'term', 'id': b:terminal_job_id}
     call extend(g:send_target, g:send_multiline[term_type])
 endfunction
 
@@ -41,29 +41,33 @@ function! s:SendToTerm(mode, ...)
         let lines = getline(marks[0], marks[1])
         if a:mode ==# 'char' || a:mode ==# 'v'
             " For char-based modes, truncate first and last lines
-            let [c0, c1] = map(copy(marks), 'getpos(v:val)[2] - 1')
+            let col0 = getpos(marks[0])[2] - 1
+            let col1 = getpos(marks[1])[2] - 1
             if len(lines) == 1
-                let lines[0] = lines[0][c0:c1]
+                let lines[0] = lines[0][col0:col1]
             else
-                let lines[0] = lines[0][c0:]
-                let lines[-1] = lines[-1][:c1]
+                let lines[0] = lines[0][col0:]
+                let lines[-1] = lines[-1][:col1]
             endif
         end
-        " echom string(marks)
-        " echom join([a:mode, getpos(marks[0]), getpos(marks[1]), lines])
     endif
-    " echom string(lines)
-    let term = g:send_target
+
+    let dest = g:send_target
+    " destination is an jupyter kernel
+    if dest.type == 'ipy'
+        return SendLines(dest.id, join(lines, "\n"))
+    endif
+
+    " destination is a term
     if len(lines) > 1
-        let line = term.begin . join(lines, term.newline) . term.end
+        let line = dest.begin . join(lines, dest.newline) . dest.end
     else
         let line = lines[0] . "\n"
     endif
-    call jobsend(term.id, line)
-    " If sending multiple lines over multiple commands, slow down a little to
+    call jobsend(dest.id, line)
+    " If sending over multiple commands ([count]ss), slow down a little to
     " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
-        " echom v:count1
         sleep 100m
     endif
 endfunction

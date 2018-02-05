@@ -1,0 +1,2 @@
+neovim
+jupyter_client
