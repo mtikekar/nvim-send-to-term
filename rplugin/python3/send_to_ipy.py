@@ -35,3 +35,9 @@ class SendToIPy(object):
     def send_lines(self, args):
         cf, line = args
         self.clients[cf].execute(line)
+
+    @neovim.function('SendComplete', sync=True)
+    def complete(self, args):
+        cf, line, pos = args
+        reply = self.clients[cf].complete(line, pos, reply=True)['content']
+        return [reply['cursor_start']] + reply['matches']

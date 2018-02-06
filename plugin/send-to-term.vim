@@ -72,6 +72,16 @@ function! s:SendToTerm(mode, ...)
     endif
 endfunction
 
+function! SendCompl(findstart, base)
+    if a:findstart == 1
+        let g:send_completions = SendComplete(g:send_target.id,
+                    \ getline('.'), getpos('.')[2] - 1)
+        return g:send_completions[0]
+    else
+        return g:send_completions[1:]
+    endif
+endfunction
+
 command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
 
 nmap <silent> ss :call <SID>SendToTerm('direct', getline('.'))<cr>
