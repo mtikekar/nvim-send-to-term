@@ -4,23 +4,24 @@ from jupyter_core.paths import jupyter_runtime_dir
 import os, fnmatch
 
 @neovim.plugin
-class SendToIPy(object):
+class SendToIPython(object):
     def __init__(self, nvim):
         self.nvim = nvim
         self.clients = {}
 
     @neovim.function('RunningKernels', sync=True)
     def running_kernels(self, args):
-        l = os.listdir(jupyter_runtime_dir())
-        l = fnmatch.filter(l, 'kernel-*.json')
-        if l:
-            l.append('newest')
+        rdir = jupyter_runtime_dir()
+        l = fnmatch.filter(os.listdir(rdir), 'kernel-*.json')
+        if len(l) > 1:
+            cf = os.path.relpath(find_connection_file(), rdir)
+            l = [f + '(newest)' if f == cf else f for f in l]
         return l
 
     @neovim.command('SendTo', nargs='?', complete='customlist,RunningKernels')
     def send_to(self, args):
-        if args[0] == 'newest':
-            args = ()
+        if args and args[0].endswith('(newest)'):
+            args[0] = args[0][:-len('(newest)')]
         cf = find_connection_file(*args)
 
         if cf not in self.clients:
@@ -31,13 +32,22 @@ class SendToIPy(object):
 
         self.nvim.vars['send_target'] = {'type': 'ipy', 'id': cf}
 
-    @neovim.function('SendLines')
+    @neovim.function('SendToIPy')
     def send_lines(self, args):
-        cf, line = args
-        self.clients[cf].execute(line)
+        lines, = args
+        cf = self.nvim.vars['send_target']['id']
+        self.clients[cf].execute('\n'.join(lines))
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
-        cf, line, pos = args
-        reply = self.clients[cf].complete(line, pos, reply=True)['content']
-        return [reply['cursor_start']] + reply['matches']
+        findstart, base = args
+        if findstart:
+            v = self.nvim
+            cf = v.vars['send_target']['id']
+            line = v.current.line
+            pos = v.current.window.cursor[1]
+            reply = self.clients[cf].complete(line, pos, reply=True)['content']
+            self.completions = reply['matches']
+            return reply['cursor_start']
+        else:
+            return self.completions

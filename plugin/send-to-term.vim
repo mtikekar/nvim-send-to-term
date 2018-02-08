@@ -1,6 +1,4 @@
-if !exists('g:send_multiline')
-    let g:send_multiline = {}
-endif
+let g:send_multiline = get(g:, 'send_multiline', {})
 let g:send_multiline.default = {'begin':'', 'end':"\n", 'newline':"\n"}
 let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline':"\n"}
 " This works too:
@@ -21,7 +19,23 @@ function! s:SendOpts(ArgLead, CmdLine, CursorPos)
     return keys(g:send_multiline)
 endfunction
 
-function! s:SendToTerm(mode, ...)
+function! s:SendToTerm(lines)
+    " destination is a term
+    let dest = g:send_target
+    if len(a:lines) > 1
+        let line = dest.begin . join(a:lines, dest.newline) . dest.end
+    else
+        let line = a:lines[0] . "\n"
+    endif
+    call jobsend(dest.id, line)
+    " If sending over multiple commands ([count]ss), slow down a little to
+    " let some REPLs catch up (IPython, basically)
+    if v:count1 > 1
+        sleep 100m
+    endif
+endfunction
+
+function! s:Send(mode, ...)
     if !exists('g:send_target')
         echoerr 'Target terminal not set. Do :SendHere in the desired terminal.'
         return 0
@@ -52,40 +66,17 @@ function! s:SendToTerm(mode, ...)
         end
     endif
 
-    let dest = g:send_target
-    " destination is an jupyter kernel
-    if dest.type == 'ipy'
-        return SendLines(dest.id, join(lines, "\n"))
-    endif
-
-    " destination is a term
-    if len(lines) > 1
-        let line = dest.begin . join(lines, dest.newline) . dest.end
-    else
-        let line = lines[0] . "\n"
-    endif
-    call jobsend(dest.id, line)
-    " If sending over multiple commands ([count]ss), slow down a little to
-    " let some REPLs catch up (IPython, basically)
-    if v:count1 > 1
-        sleep 100m
-    endif
-endfunction
-
-function! SendCompl(findstart, base)
-    if a:findstart == 1
-        let g:send_completions = SendComplete(g:send_target.id,
-                    \ getline('.'), getpos('.')[2] - 1)
-        return g:send_completions[0]
-    else
-        return g:send_completions[1:]
+    if g:send_target.type == 'term'
+        call s:SendToTerm(lines)
+    elseif g:send_target.type == 'ipy'
+        call SendToIPy(lines)
     endif
 endfunction
 
 command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
 
-nmap <silent> ss :call <SID>SendToTerm('direct', getline('.'))<cr>
+nmap <silent> ss :call <SID>Send('direct', getline('.'))<cr>
 nmap <silent> S s$
 
-nmap <silent> s :set opfunc=<SID>SendToTerm<cr>g@
-vmap <silent> s :<c-u>call <SID>SendToTerm(visualmode())<cr>
+nmap <silent> s :set opfunc=<SID>Send<cr>g@
+vmap <silent> s :<c-u>call <SID>Send(visualmode())<cr>
