@@ -64,8 +64,8 @@ function! s:Send(mode, ...)
         let lines = getline(marks[0], marks[1])
         if a:mode ==# 'char' || a:mode ==# 'v'
             " For char-based modes, truncate first and last lines
-            let col0 = getpos(marks[0])[2] - 1
-            let col1 = getpos(marks[1])[2] - 1
+            let col0 = col(marks[0]) - 1
+            let col1 = col(marks[1]) - 1
             if len(lines) == 1
                 let lines[0] = lines[0][col0:col1]
             else
