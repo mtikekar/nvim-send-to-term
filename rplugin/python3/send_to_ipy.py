@@ -2,6 +2,7 @@ import neovim
 from jupyter_client import BlockingKernelClient, find_connection_file
 from jupyter_core.paths import jupyter_runtime_dir
 import os, fnmatch, re
+from queue import Empty
 
 timeout = 0.5
 
@@ -64,12 +65,38 @@ class SendToIPython(object):
             self.completions = sorted(frozenset(reply['matches']))
             return reply['cursor_start']
         else:
-            for i in range(len(self.completions)):
-                try:
-                    reply = client.inspect(self.completions[i], reply=True, timeout=timeout)['content']
-                except TimeoutError:
-                    return self.completions
-                info = reply['data'].get('text/plain', '')
-                info = re.sub('\x1b\[.*?m', '', info)
-                self.completions[i] = {'word': self.completions[i], 'info':info}
-            return self.completions
+            return get_completions_fast(client, self.completions)
+
+def get_completions(client, completions):
+    for i in range(len(completions)):
+        try:
+            reply = client.inspect(completions[i], reply=True, timeout=timeout)['content']
+        except TimeoutError:
+            return completions
+        info = reply['data'].get('text/plain', '')
+        info = re.sub('\x1b\[.*?m', '', info)
+        completions[i] = {'word': completions[i], 'info':info}
+    return completions
+
+def get_completions_fast(client, completions):
+    n = len(completions)
+
+    msg_ids = [0] * n
+    for i, c in enumerate(completions):
+        msg_ids[i] = client.inspect(c)
+
+    while n > 0:
+        try:
+            reply = client.get_shell_msg(timeout=timeout)
+        except Empty:
+            return completions
+        try:
+            idx = msg_ids.index(reply['parent_header']['msg_id'])
+        except ValueError:
+            continue
+
+        info = reply['content']['data'].get('text/plain', '')
+        info = re.sub('\x1b\[.*?m', '', info)
+        completions[idx] = {'word': completions[idx], 'info':info}
+        n = n - 1
+    return completions
