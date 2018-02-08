@@ -30,20 +30,25 @@ class SendToIPython(object):
             client.start_channels()
             self.clients[cf] = client
 
-        self.nvim.vars['send_target'] = {'type': 'ipy', 'id': cf}
+        # Load SendToIPy by calling it once. Without it, the
+        # function("SendToIPy") call cannot find a funcref to it
+        self.nvim.command('call SendToIPy()')
+        cmd = 'let g:send_target = {"ipy_conn":"%s", "send":function("SendToIPy")}' % cf
+        self.nvim.command(cmd)
 
     @neovim.function('SendToIPy')
     def send_lines(self, args):
-        lines, = args
-        cf = self.nvim.vars['send_target']['id']
-        self.clients[cf].execute('\n'.join(lines))
+        if args:
+            lines, = args
+            cf = self.nvim.vars['send_target']['ipy_conn']
+            self.clients[cf].execute('\n'.join(lines))
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
         findstart, base = args
         if findstart:
             v = self.nvim
-            cf = v.vars['send_target']['id']
+            cf = v.vars['send_target']['ipy_conn']
             line = v.current.line
             pos = v.current.window.cursor[1]
             reply = self.clients[cf].complete(line, pos, reply=True)['content']

@@ -1,3 +1,9 @@
+if exists("g:loaded_sendtoterm")
+  finish
+endif
+let g:loaded_sendtoterm = 1
+
+" Parts specific to terminal destination
 let g:send_multiline = get(g:, 'send_multiline', {})
 let g:send_multiline.default = {'begin':'', 'end':"\n", 'newline':"\n"}
 let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline':"\n"}
@@ -11,7 +17,7 @@ function! s:SendHere(...)
     end
 
     let term_type = get(a:000, 0, 'default')
-    let g:send_target = {'type': 'term', 'id': b:terminal_job_id}
+    let g:send_target = {'term_id': b:terminal_job_id, 'send': function("s:SendToTerm")}
     call extend(g:send_target, g:send_multiline[term_type])
 endfunction
 
@@ -27,7 +33,7 @@ function! s:SendToTerm(lines)
     else
         let line = a:lines[0] . "\n"
     endif
-    call jobsend(dest.id, line)
+    call jobsend(dest.term_id, line)
     " If sending over multiple commands ([count]ss), slow down a little to
     " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
@@ -35,6 +41,9 @@ function! s:SendToTerm(lines)
     endif
 endfunction
 
+command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
+
+" General 'Send' framework
 function! s:Send(mode, ...)
     if !exists('g:send_target')
         echoerr 'Target terminal not set. Do :SendHere in the desired terminal.'
@@ -66,14 +75,8 @@ function! s:Send(mode, ...)
         end
     endif
 
-    if g:send_target.type == 'term'
-        call s:SendToTerm(lines)
-    elseif g:send_target.type == 'ipy'
-        call SendToIPy(lines)
-    endif
+    call g:send_target.send(lines)
 endfunction
-
-command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
 
 nmap <silent> ss :call <SID>Send('direct', getline('.'))<cr>
 nmap <silent> S s$
