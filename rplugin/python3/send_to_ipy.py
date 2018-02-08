@@ -1,7 +1,9 @@
 import neovim
 from jupyter_client import BlockingKernelClient, find_connection_file
 from jupyter_core.paths import jupyter_runtime_dir
-import os, fnmatch
+import os, fnmatch, re
+
+timeout = 0.5
 
 @neovim.plugin
 class SendToIPython(object):
@@ -46,13 +48,28 @@ class SendToIPython(object):
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
         findstart, base = args
+        v = self.nvim
+        cf = v.vars['send_target']['ipy_conn']
+        client = self.clients[cf]
+
         if findstart:
-            v = self.nvim
-            cf = v.vars['send_target']['ipy_conn']
             line = v.current.line
             pos = v.current.window.cursor[1]
-            reply = self.clients[cf].complete(line, pos, reply=True)['content']
-            self.completions = reply['matches']
+            try:
+                reply = client.complete(line, pos, reply=True, timeout=timeout)['content']
+            except TimeoutError:
+                return -2
+            # bug in ipykernel returns duplicates
+            # neovim removes duplicates, but handling it here
+            self.completions = sorted(frozenset(reply['matches']))
             return reply['cursor_start']
         else:
+            for i in range(len(self.completions)):
+                try:
+                    reply = client.inspect(self.completions[i], reply=True, timeout=timeout)['content']
+                except TimeoutError:
+                    return self.completions
+                info = reply['data'].get('text/plain', '')
+                info = re.sub('\x1b\[.*?m', '', info)
+                self.completions[i] = {'word': self.completions[i], 'info':info}
             return self.completions
