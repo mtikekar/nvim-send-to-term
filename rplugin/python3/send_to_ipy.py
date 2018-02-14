@@ -44,7 +44,10 @@ class SendToIPython(object):
     def complete(self, args):
         findstart, base = args
         v = self.nvim
-        cf = v.vars['send_target']['ipy_conn']
+        try:
+            cf = v.vars['send_target']['ipy_conn']
+        except:
+            return -1 # cancel completion with error message
         client = self.clients[cf]
 
         if findstart:
