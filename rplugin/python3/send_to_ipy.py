@@ -95,7 +95,7 @@ def get_completions_fast(client, completions):
         except ValueError:
             continue
 
-        info = reply['content']['data'].get('text/plain', '')
+        info = reply['content']['data'].get('text/plain', ' ')
         info = re.sub('\x1b\[.*?m', '', info)
         completions[idx] = {'word': completions[idx], 'info':info}
         n = n - 1
