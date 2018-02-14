@@ -17,7 +17,7 @@ function! s:SendHere(...)
     end
 
     let term_type = get(a:000, 0, 'default')
-    let g:send_target = {'term_id': b:terminal_job_id, 'send': function("s:SendToTerm")}
+    let g:send_target = {'term_id': b:terminal_job_id, 'send': function("s:SendLinesToTerm")}
     call extend(g:send_target, g:send_multiline[term_type])
 endfunction
 
@@ -25,15 +25,14 @@ function! s:SendOpts(ArgLead, CmdLine, CursorPos)
     return keys(g:send_multiline)
 endfunction
 
-function! s:SendToTerm(lines)
+function! s:SendLinesToTerm(lines) dict
     " destination is a term
-    let dest = g:send_target
     if len(a:lines) > 1
-        let line = dest.begin . join(a:lines, dest.newline) . dest.end
+        let line = self.begin . join(a:lines, self.newline) . self.end
     else
         let line = a:lines[0] . "\n"
     endif
-    call jobsend(dest.term_id, line)
+    call jobsend(self.term_id, line)
     " If sending over multiple commands ([count]ss), slow down a little to
     " let some REPLs catch up (IPython, basically)
     if v:count1 > 1
@@ -42,6 +41,18 @@ function! s:SendToTerm(lines)
 endfunction
 
 command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
+
+" Parts specific to jupyter kernel destination
+function! s:SendToJupyter(...)
+    let cf = call('_SendToJupyter', a:000)
+    let g:send_target = {'ipy_conn': cf, 'send': function("s:SendLinesToJupyter")}
+endfunction
+
+function! s:SendLinesToJupyter(lines) dict
+    call _SendLinesToJupyter(self.ipy_conn, a:lines)
+endfunction
+
+command! -complete=customlist,RunningKernels -nargs=? SendTo :call <SID>SendToJupyter(<f-args>)
 
 " General 'Send' framework
 function! s:Send(mode, ...)

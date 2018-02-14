@@ -21,7 +21,7 @@ class SendToIPython(object):
             l = [f + '(newest)' if f == cf else f for f in l]
         return l
 
-    @neovim.command('SendTo', nargs='?', complete='customlist,RunningKernels')
+    @neovim.function('_SendToJupyter', sync=True)
     def send_to(self, args):
         if args and args[0].endswith('(newest)'):
             args[0] = args[0][:-len('(newest)')]
@@ -33,18 +33,12 @@ class SendToIPython(object):
             client.start_channels()
             self.clients[cf] = client
 
-        # Load SendToIPy by calling it once. Without it, the
-        # function("SendToIPy") call cannot find a funcref to it
-        self.nvim.command('call SendToIPy()')
-        cmd = 'let g:send_target = {"ipy_conn":"%s", "send":function("SendToIPy")}' % cf
-        self.nvim.command(cmd)
+        return cf
 
-    @neovim.function('SendToIPy')
+    @neovim.function('_SendLinesToJupyter')
     def send_lines(self, args):
-        if args:
-            lines, = args
-            cf = self.nvim.vars['send_target']['ipy_conn']
-            self.clients[cf].execute('\n'.join(lines))
+        cf, lines = args
+        self.clients[cf].execute('\n'.join(lines))
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
