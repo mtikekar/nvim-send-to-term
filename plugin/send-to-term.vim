@@ -57,7 +57,7 @@ command! -complete=customlist,RunningKernels -nargs=? SendTo :call <SID>SendToJu
 " General 'Send' framework
 function! s:Send(mode, ...)
     if !exists('g:send_target')
-        echoerr 'Target terminal not set. Do :SendHere in the desired terminal.'
+        echoerr 'Target terminal not set. Run :SendHere or :SendTo first.'
         return 0
     endif
 
@@ -89,8 +89,15 @@ function! s:Send(mode, ...)
     call g:send_target.send(lines)
 endfunction
 
-nmap <silent> ss :call <SID>Send('direct', getline('.'))<cr>
-nmap <silent> S s$
+nmap <silent> <Plug>SendLine :call <SID>Send('direct', getline('.'))<cr>
+nmap <silent> <Plug>Send :set opfunc=<SID>Send<cr>g@
+vmap <silent> <Plug>Send :<c-u>call <SID>Send(visualmode())<cr>
 
-nmap <silent> s :set opfunc=<SID>Send<cr>g@
-vmap <silent> s :<c-u>call <SID>Send(visualmode())<cr>
+if get(g:, "send_disable_mapping", 0)
+    finish
+endif
+
+nmap ss <Plug>SendLine
+nmap s <Plug>Send
+vmap s <Plug>Send
+nmap S s$

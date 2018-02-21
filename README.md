@@ -32,15 +32,18 @@ Then use them as: `:SendHere repl1`.
 
 ## Provided commands, functions, operators
 
-```vim
-g:send_multiline
-:SendHere <repl>
-:SendHere         " send with default multiline settings
-[count]ss
-<visual selection>s
-s<motion>
-S
-```
+| Name                            | Documentation                                                |
+| ------------------------------- | ------------------------------------------------------------ |
+| `:SendHere`, `:SendHere <repl>` | Set current terminal as send target with multiline settings for `repl`. If `repl` is not provided, default mutliline settings are used. |
+| `[count]ss`                     | Send `count` lines and move cursor to last line.             |
+| `<visual>s`                     | Send visual selection.                                       |
+| `s<motion>`                     | Send motion or text object (like `y/d` for yank/delete).     |
+| `S`                             | Send from current column till end of line (like `D`)         |
+| `g:send_multiline`              | Add multiline settings for your favourite REPL here.         |
+| `g:send_disable_mapping`        | Disable `s`, `S`, `ss` mappings                              |
+| `<Plug>Send`, `<Plug>SendLine`  | Use these to define your own mapping                         |
+
+
 
 ## To do
 
@@ -81,10 +84,9 @@ Type Ctrl-x Ctrl-o to see the autocomplete suggestions. You can integrate it
 with other vim autocomplete plugins that work with user-defined completions or
 omnicompletion.
 
-### Provided commands
+### Provided commands, functions
 
-```vim
-:SendTo <kernel-pid.json>
-:SendTo           " send to the kernel started latest
-SendComplete()
-```
+| Name        |  Documentation           |
+|-------------|--------------------------|
+| `:SendTo`, `:SendTo <kernel-pid.json>` | Send to existing Jupyter kernel. Run `%connect_info` in the Python session to get value of `kernel-pid.json`. Or, skip it to connect to latest started kernel. |
+| `SendComplete()`     | Completion function to be used as `omnifunc` or `completefunc` |
