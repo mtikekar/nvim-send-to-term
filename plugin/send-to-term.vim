@@ -4,9 +4,10 @@ endif
 let g:loaded_sendtoterm = 1
 
 " Parts specific to terminal destination
+let s:nl = has("win32")? "\r\n": "\n"
 let g:send_multiline = get(g:, 'send_multiline', {})
-let g:send_multiline.default = {'begin':'', 'end':"\n", 'newline':"\n"}
-let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline':"\n"}
+let g:send_multiline.default = {'begin':'', 'end': s:nl, 'newline': s:nl}
+let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline': s:nl}
 " This works too:
 " let g:send_multiline.ipy = {'begin':'', 'end':"\r\r\r", 'newline':"\<c-q>\n"}
 
@@ -30,7 +31,7 @@ function! s:SendLinesToTerm(lines) dict
     if len(a:lines) > 1
         let line = self.begin . join(a:lines, self.newline) . self.end
     else
-        let line = a:lines[0] . "\n"
+        let line = a:lines[0] . s:nl
     endif
     call jobsend(self.term_id, line)
     " If sending over multiple commands ([count]ss), slow down a little to
