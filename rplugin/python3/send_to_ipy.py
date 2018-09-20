@@ -4,6 +4,7 @@ from jupyter_core.paths import jupyter_runtime_dir
 import re
 from queue import Empty
 from pathlib import Path
+from time import time
 
 timeout = 0.5
 
@@ -57,43 +58,35 @@ class SendToIPython(object):
                 reply = client.complete(line, pos, reply=True, timeout=timeout)['content']
             except TimeoutError:
                 return -2
-            # bug in ipykernel returns duplicates
-            # neovim removes duplicates, but handling it here
-            self.completions = sorted(frozenset(reply['matches']))
+            self.completions = [{'word':w, 'info':' '} for w in reply['matches']]
             return reply['cursor_start']
         else:
-            return get_completions_fast(client, self.completions)
+            # TODO: use vim's complete_add/complete_check for asyc operation
+            get_info(client, self.completions)
+            return {'words': self.completions, 'refresh': 'always'}
 
-def get_completions(client, completions):
-    for i in range(len(completions)):
-        try:
-            reply = client.inspect(completions[i], reply=True, timeout=timeout)['content']
-        except TimeoutError:
-            return completions
-        info = reply['data'].get('text/plain', '')
-        info = re.sub('\x1b\[.*?m', '', info)
-        completions[i] = {'word': completions[i], 'info':info}
-    return completions
+def get_info(client, completions):
+    # send inspect requests until first timeout
+    stop_time = time() + timeout
+    msg_ids = []
+    for c in completions:
+        msg_ids.append(client.inspect(c['word']))
+        if time() > stop_time:
+            break
 
-def get_completions_fast(client, completions):
-    n = len(completions)
+    # collect responses until second timeout
+    stop_time = time() + timeout
+    n = len(msg_ids)
+    while n > 0 and time() < stop_time:
+        for reply in client.shell_channel.get_msgs():
+            # match reply to inspect request
+            try:
+                idx = msg_ids.index(reply['parent_header']['msg_id'])
+            except ValueError:
+                continue
 
-    msg_ids = [0] * n
-    for i, c in enumerate(completions):
-        msg_ids[i] = client.inspect(c)
-
-    while n > 0:
-        try:
-            reply = client.get_shell_msg(timeout=timeout)
-        except Empty:
-            return completions
-        try:
-            idx = msg_ids.index(reply['parent_header']['msg_id'])
-        except ValueError:
-            continue
-
-        info = reply['content']['data'].get('text/plain', ' ')
-        info = re.sub('\x1b\[.*?m', '', info)
-        completions[idx] = {'word': completions[idx], 'info':info}
-        n = n - 1
-    return completions
+            info = reply['content']['data'].get('text/plain')
+            if info:
+                # remove ANSI escape sequences
+                completions[idx]['info'] = re.sub('\x1b\[.*?m', '', info)
+            n = n - 1
