@@ -15,7 +15,10 @@ class SendToIPython(object):
     @neovim.function('RunningKernels', sync=True)
     def running_kernels(self, args):
         rdir = jupyter_runtime_dir()
-        l = fnmatch.filter(os.listdir(rdir), 'kernel-*.json')
+        try:
+            l = fnmatch.filter(os.listdir(rdir), 'kernel-*.json')
+        except:
+            l = []
         if len(l) > 1:
             cf = os.path.relpath(find_connection_file(), rdir)
             l = [f + '(newest)' if f == cf else f for f in l]
