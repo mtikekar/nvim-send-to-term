@@ -46,7 +46,11 @@ command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHer
 " Parts specific to jupyter kernel destination
 function! s:SendToJupyter(...)
     let cf = call('_SendToJupyter', a:000)
-    let g:send_target = {'ipy_conn': cf, 'send': function("s:SendLinesToJupyter")}
+    if cf == v:null
+        echom "No kernel found"
+    else
+        let g:send_target = {'ipy_conn': cf, 'send': function("s:SendLinesToJupyter")}
+    endif
 endfunction
 
 function! s:SendLinesToJupyter(lines) dict

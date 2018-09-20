@@ -1,8 +1,9 @@
 import neovim
-from jupyter_client import BlockingKernelClient, find_connection_file
+from jupyter_client import BlockingKernelClient
 from jupyter_core.paths import jupyter_runtime_dir
-import os, fnmatch, re
+import re
 from queue import Empty
+from pathlib import Path
 
 timeout = 0.5
 
@@ -11,24 +12,20 @@ class SendToIPython(object):
     def __init__(self, nvim):
         self.nvim = nvim
         self.clients = {}
+        self.kerneldir = Path(jupyter_runtime_dir())
 
     @neovim.function('RunningKernels', sync=True)
     def running_kernels(self, args):
-        rdir = jupyter_runtime_dir()
-        try:
-            l = fnmatch.filter(os.listdir(rdir), 'kernel-*.json')
-        except:
-            l = []
-        if len(l) > 1:
-            cf = os.path.relpath(find_connection_file(), rdir)
-            l = [f + '(newest)' if f == cf else f for f in l]
-        return l
+        l = self.kerneldir.glob('kernel-*.json')
+        l = sorted(l, reverse=True, key=lambda f: f.stat().st_ctime)
+        return [f.name for f in l]
 
     @neovim.function('_SendToJupyter', sync=True)
     def send_to(self, args):
-        if args and args[0].endswith('(newest)'):
-            args[0] = args[0][:-len('(newest)')]
-        cf = find_connection_file(*args)
+        cfs = args or self.running_kernels(None)
+        if not cfs:
+            return
+        cf = (self.kerneldir / cfs[0]).as_posix()
 
         if cf not in self.clients:
             client = BlockingKernelClient()
