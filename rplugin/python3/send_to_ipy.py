@@ -7,6 +7,7 @@ from pathlib import Path
 from time import time
 
 timeout = 0.5
+ansi_re = re.compile('\x1b\[.*?m')
 
 @neovim.plugin
 class SendToIPython(object):
@@ -61,32 +62,31 @@ class SendToIPython(object):
             self.completions = [{'word':w, 'info':' '} for w in reply['matches']]
             return reply['cursor_start']
         else:
-            # TODO: use vim's complete_add/complete_check for asyc operation
+            # TODO: use vim's complete_add/complete_check for async operation
             get_info(client, self.completions)
             return {'words': self.completions, 'refresh': 'always'}
 
 def get_info(client, completions):
-    # send inspect requests until first timeout
-    stop_time = time() + timeout
-    msg_ids = []
+    # send inspect requests
+    msg_ids = {}
     for c in completions:
-        msg_ids.append(client.inspect(c['word']))
-        if time() > stop_time:
-            break
+        msg_ids[client.inspect(c['word'])] = c
 
-    # collect responses until second timeout
+    # collect responses until timeout
     stop_time = time() + timeout
     n = len(msg_ids)
     while n > 0 and time() < stop_time:
-        for reply in client.shell_channel.get_msgs():
-            # match reply to inspect request
-            try:
-                idx = msg_ids.index(reply['parent_header']['msg_id'])
-            except ValueError:
-                continue
+        try:
+            reply = client.get_shell_msg(timeout=timeout)
+        except Empty:
+            return
+        # match reply to inspect request
+        c = msg_ids.get(reply['parent_header']['msg_id'])
+        if not c:
+            continue
 
-            info = reply['content']['data'].get('text/plain')
-            if info:
-                # remove ANSI escape sequences
-                completions[idx]['info'] = re.sub('\x1b\[.*?m', '', info)
-            n = n - 1
+        info = reply['content']['data'].get('text/plain')
+        if info:
+            # remove ANSI escape sequences
+            c['info'] = ansi_re.sub('', info)
+        n = n - 1
