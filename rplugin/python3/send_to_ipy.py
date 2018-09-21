@@ -22,7 +22,7 @@ class SendToIPython(object):
         l = sorted(l, reverse=True, key=lambda f: f.stat().st_ctime)
         return [f.name for f in l]
 
-    @neovim.command('SendTo', complete='customlist,RunningKernels', nargs='?', sync=True)
+    @neovim.command('SendTo', complete='customlist,RunningKernels', nargs='?')
     def send_to(self, args):
         cfs = args or self.running_kernels(None)
         if not cfs:

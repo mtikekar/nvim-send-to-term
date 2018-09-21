@@ -13,7 +13,7 @@ let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline':
 
 function! s:SendHere(...)
     if !exists('b:terminal_job_id')
-        echoerr 'This buffer is not a terminal.'
+        echom 'This buffer is not a terminal.'
         return
     end
 
@@ -47,7 +47,7 @@ command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHer
 function! s:Send(mode, ...)
     if !exists('g:send_target')
         echom 'Target terminal not set. Run :SendHere or :SendTo first.'
-        return 0
+        return
     endif
 
     if a:mode ==# 'direct'
