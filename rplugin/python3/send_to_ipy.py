@@ -22,25 +22,29 @@ class SendToIPython(object):
         l = sorted(l, reverse=True, key=lambda f: f.stat().st_ctime)
         return [f.name for f in l]
 
-    @neovim.function('_SendToJupyter', sync=True)
+    @neovim.command('SendTo', complete='customlist,RunningKernels', nargs='?', sync=True)
     def send_to(self, args):
         cfs = args or self.running_kernels(None)
         if not cfs:
+            self.nvim.command('echom "No kernel found"')
             return
-        cf = (self.kerneldir / cfs[0]).as_posix()
 
+        cf = (self.kerneldir / cfs[0]).as_posix()
         if cf not in self.clients:
             client = BlockingKernelClient()
             client.load_connection_file(cf)
             client.start_channels()
             self.clients[cf] = client
+        # run function once to register it for the `funcref` function
+        self.nvim.command('call SendLinesToJupyter()')
+        cmd = 'let g:send_target = {"ipy_conn": "%s", "send": funcref("SendLinesToJupyter")}' % cf
+        self.nvim.command(cmd)
 
-        return cf
-
-    @neovim.function('_SendLinesToJupyter')
+    @neovim.function('SendLinesToJupyter')
     def send_lines(self, args):
-        cf, lines = args
-        self.clients[cf].execute('\n'.join(lines))
+        if args:
+            cf = self.nvim.vars['send_target']['ipy_conn']
+            self.clients[cf].execute('\n'.join(args[0]))
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):

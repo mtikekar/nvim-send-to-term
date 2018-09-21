@@ -43,26 +43,10 @@ endfunction
 
 command! -complete=customlist,<SID>SendOpts -nargs=? SendHere :call <SID>SendHere(<f-args>)
 
-" Parts specific to jupyter kernel destination
-function! s:SendToJupyter(...)
-    let cf = call('_SendToJupyter', a:000)
-    if cf == v:null
-        echom "No kernel found"
-    else
-        let g:send_target = {'ipy_conn': cf, 'send': function("s:SendLinesToJupyter")}
-    endif
-endfunction
-
-function! s:SendLinesToJupyter(lines) dict
-    call _SendLinesToJupyter(self.ipy_conn, a:lines)
-endfunction
-
-command! -complete=customlist,RunningKernels -nargs=? SendTo :call <SID>SendToJupyter(<f-args>)
-
 " General 'Send' framework
 function! s:Send(mode, ...)
     if !exists('g:send_target')
-        echoerr 'Target terminal not set. Run :SendHere or :SendTo first.'
+        echom 'Target terminal not set. Run :SendHere or :SendTo first.'
         return 0
     endif
 
