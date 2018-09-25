@@ -13,7 +13,7 @@ ansi_re = re.compile('\x1b\[.*?m')
 class SendToIPython(object):
     def __init__(self, nvim):
         self.nvim = nvim
-        self.clients = {}
+        self.client = None
         self.kerneldir = Path(jupyter_runtime_dir())
 
     @neovim.function('RunningKernels', sync=True)
@@ -29,45 +29,43 @@ class SendToIPython(object):
             self.nvim.command('echom "No kernel found"')
             return
 
-        cf = (self.kerneldir / cfs[0]).as_posix()
-        if cf not in self.clients:
-            client = BlockingKernelClient()
-            client.load_connection_file(cf)
-            client.start_channels()
-            self.clients[cf] = client
+        if self.client is not None:
+            self.client.stop_channels()
+
+        cf = cfs[0]
+        self.client = BlockingKernelClient()
+        self.client.load_connection_file(self.kerneldir / cf)
+        self.client.start_channels()
+
         # run function once to register it for the `funcref` function
         self.nvim.command('call SendLinesToJupyter()')
-        cmd = 'let g:send_target = {"ipy_conn": "%s", "send": funcref("SendLinesToJupyter")}' % cf
-        self.nvim.command(cmd)
+        self.nvim.command('let g:send_target = {"send": funcref("SendLinesToJupyter")}')
+        self.nvim.command('echom "Sending to %s"' % cf)
 
     @neovim.function('SendLinesToJupyter')
     def send_lines(self, args):
         if args:
-            cf = self.nvim.vars['send_target']['ipy_conn']
-            self.clients[cf].execute('\n'.join(args[0]))
+            self.client.execute('\n'.join(args[0]))
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
-        findstart, base = args
-        v = self.nvim
-        try:
-            cf = v.vars['send_target']['ipy_conn']
-        except:
+        if self.client is None:
             return -1 # cancel completion with error message
-        client = self.clients[cf]
+
+        findstart, base = args
 
         if findstart:
-            line = v.current.line
-            pos = v.current.window.cursor[1]
+            line = self.nvim.current.line
+            pos = self.nvim.current.window.cursor[1]
             try:
-                reply = client.complete(line, pos, reply=True, timeout=timeout)['content']
+                reply = self.client.complete(line, pos, reply=True, timeout=timeout)['content']
             except TimeoutError:
                 return -2
             self.completions = [{'word':w, 'info':' '} for w in reply['matches']]
             return reply['cursor_start']
         else:
             # TODO: use vim's complete_add/complete_check for async operation
-            get_info(client, self.completions)
+            get_info(self.client, self.completions)
             return {'words': self.completions, 'refresh': 'always'}
 
 def get_info(client, completions):
