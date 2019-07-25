@@ -68,6 +68,10 @@ class SendToIPython(object):
             get_info(self.client, self.completions)
             return {'words': self.completions, 'refresh': 'always'}
 
+    @neovim.function('SendCanComplete', sync=True)
+    def can_complete(self, args):
+        return args[0] != '' and self.client is not None and self.client.is_alive()
+
 def get_info(client, completions):
     # send inspect requests
     msg_ids = {}

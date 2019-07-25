@@ -90,3 +90,4 @@ omnicompletion.
 |-------------|--------------------------|
 | `:SendTo`, `:SendTo <kernel-pid.json>` | Send to existing Jupyter kernel. Run `%connect_info` in the Python session to get value of `kernel-pid.json`. Or, skip it to connect to latest started kernel. |
 | `SendComplete()`     | Completion function to be used as `omnifunc` or `completefunc` |
+| `SendCanComplete(line)`  | Completion is available for `line` |
