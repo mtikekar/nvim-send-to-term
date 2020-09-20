@@ -61,17 +61,21 @@ This plugin works nicely with [vim-pythonsense](https://github.com/jeetsukumaran
 For example, you can do `saf` and `sac` to send functions and classes from your code buffer to the
 Python REPL.
 
+## Extensions for other targets
+
+This plugin is extensible: you can define other types of targets to send text to as follows:
+
+1. Define a vim function: `function SendToTarget(lines) ...`. `lines` is a list of strings that
+   hold the text to be sent.
+2. Save the function to the `send_target` variable: `let g:send_target = {'send': function('SendToTarget')}`
+3. Optional: add other fields to `g:send_target` that are relevant to your function.
 
 ## Sending to Jupyter kernels
 
-This plugin is extensible: you can define other types of targets to send code to. To do so, you
-need to define a vim function: `function SendToTarget(lines) ...` and save it in a variable: `let
-g:send_target = {'send': function('SendToTarget')}`.  You can add other fields to `g:send_target`
-that are relevant to your function.
-
-For example, with this plugin you can send directly to Jupyter kernels running in notebook, lab,
-qtconsole or console. You have to install the Neovim [Python client](https://github.com/neovim/python-client)
-and Jupyter client in Neovim's python host with:
+Using the extension feature described above, I have implemented a extension (included with the
+plugin) to send code directly to Jupyter kernels running in notebook, lab, qtconsole or console.
+You have to install the Neovim [Python client](https://github.com/neovim/python-client) and
+Jupyter client in Neovim's python host with:
 
 ```bash
 pip install pynvim jupyter_client
@@ -82,7 +86,7 @@ conda install -c conda-forge pynvim jupyter_client
 Then, you start a kernel in any of the Jupyter applications and run `:SendTo <kernel-pid.json>`.
 This is useful for sending code to QtConsole and using its rich display of images, inline plots,
 etc. You need to enable QtConsole's display of remote commands in its config file (usually
-`~/.jupyter/jupyter_qtconsole_config.py):
+`~/.jupyter/jupyter_qtconsole_config.py`):
 
 ```python
 c.ConsoleWidget.include_other_output = True
@@ -95,6 +99,9 @@ For Jupyter Console, add to `~/.jupyter/jupyter_console_config.py`:
 c.ZMQTerminalInteractiveShell.include_other_output = True
 c.ZMQTerminalInteractiveShell.other_output_prefix = ''
 ```
+
+Without these config settings, the kernels receive and execute the code, but do not display
+the code or the results.
 
 ### Autocomplete with Jupyter kernels
 
