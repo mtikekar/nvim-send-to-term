@@ -17,15 +17,15 @@ line-wise (`ss`, `3ss`), with visual selection (`vjs`, `Vjjs`) and with motions/
 ## Multiline quirks
 
 For multiline text, some REPLs (e.g. IPython) only receive the first line. For them, try
-`:SendHere ipy` in the terminal. You can add support for the REPL's multiline quirks in your
+`:SendHere ipy` in the terminal. You can add support for the REPLs' multiline quirks in your
 init.vim with:
 
 ```vim
 let g:send_multiline = {
-    'repl1': {'begin':..., 'end':..., 'newline':...},
-    'repl2': {'begin':..., 'end':..., 'newline':...},
-    ...
-}
+\    'repl1': {'begin':..., 'end':..., 'newline':...},
+\    'repl2': {'begin':..., 'end':..., 'newline':...},
+\    ...
+\}
 ```
 
 Then use them as: `:SendHere repl1`. If the REPL supports
