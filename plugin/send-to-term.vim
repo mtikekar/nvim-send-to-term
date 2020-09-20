@@ -5,11 +5,19 @@ let g:loaded_sendtoterm = 1
 
 " Parts specific to terminal destination
 let s:nl = has("win32")? "\r\n": "\n"
-let g:send_multiline = get(g:, 'send_multiline', {})
-let g:send_multiline.default = {'begin':'', 'end': s:nl, 'newline': s:nl}
-let g:send_multiline.ipy = {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline': s:nl}
-" This works too:
-" let g:send_multiline.ipy = {'begin':'', 'end':"\r\r\r", 'newline':"\<c-q>\n"}
+let s:send_multiline = {
+\   'default': {'begin':'', 'end': s:nl, 'newline': s:nl},
+\   'ipy': {'begin':"\e[200~", 'end':"\e[201~\r\r\r", 'newline': s:nl}
+\}
+" For ipython, this works too:
+" 'ipy': {'begin':'', 'end':"\r\r\r", 'newline':"\<c-q>\n"}
+
+" setup multiline quirks without overwriting user-defined settings
+if exists("g:send_multiline")
+    call extend(g:send_multiline, s:send_multiline, "keep")
+else
+    let g:send_multiline = s:send_multiline
+endif
 
 function! s:SendHere(...)
     if !exists('b:terminal_job_id')
