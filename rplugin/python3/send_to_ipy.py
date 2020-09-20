@@ -49,13 +49,14 @@ class SendToIPython(object):
 
     @neovim.function('SendComplete', sync=True)
     def complete(self, args):
-        if self.client is None:
-            return -1 # cancel completion with error message
-
         findstart, base = args
+        if self.client is None:
+            return -3   # no client setup yet: cancel silently and leave completion mode
 
         if findstart:
             line = self.nvim.current.line
+            if not line:
+                return -2  # empty line: cancel silently but stay in completion mode
             pos = self.nvim.current.window.cursor[1]
             try:
                 reply = self.client.complete(line, pos, reply=True, timeout=timeout)['content']
